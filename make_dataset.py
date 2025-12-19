@@ -22,16 +22,18 @@ if os.path.exists(CSV_FILE_PATH):
 # -----------------------
 # Character set
 # -----------------------
-characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+def load_characters(filepath="characters.txt"):
+    """Load character set from file (one character per line)."""
+    with open(filepath, 'r', encoding='utf-8') as f:
+        chars = [line.strip() for line in f if line.strip()]
+    return "".join(chars)
+
+characters = load_characters("characters.txt")
+print(f"Loaded {len(characters)} characters: {characters}")
 
 # -----------------------
 # Helper functions
 # -----------------------
-def clean_plate(text: str) -> str:
-    """Keep only alphanumeric, uppercase."""
-    text = text.replace(" ", "").upper()
-    return "".join(re.findall(r"[A-Z0-9]", text))
-
 def preprocess(img):
     """Resize, normalize, and convert to CHW for ONNX input."""
     img_resized = cv2.resize(img, (96, 48))
@@ -49,8 +51,8 @@ def decode(output, characters):
     plate = ""
     last_char = -1
     for c in pred:
-        if c != last_char and c != 0:  # collapse repeated + skip blank
-            plate += characters[c-1]
+        if c != last_char and c != len(characters):  # collapse repeated + skip blank
+            plate += characters[c]
         last_char = c
     return plate
 
@@ -85,7 +87,6 @@ for f in sorted(os.listdir(CROPPED_IMAGES_DIR)):
 
     # Decode prediction
     plate_text = decode(outputs[0], characters)
-    plate_text = clean_plate(plate_text)
 
     print(f"✅ Detected: {plate_text}")
     rows.append({"filepath": path, "label": plate_text})
